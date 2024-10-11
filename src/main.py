@@ -1,13 +1,15 @@
 from .conf import Conf
-from .reqs import TBFactoryReqs
-import time
+from .dumper import TBFactoryDumper
+from .report import Reporter
+from .summary import Summary
+import subprocess as sub
 
 if __name__ == '__main__':
-    tb_fac_reqs = TBFactoryReqs(Conf().load(['cookie']))
-    #export_order_id = tb_fac_reqs.exportOrder('2024-10-01', '2024-10-10')
-    #time.sleep(10)
-    #download_urls = tb_fac_reqs.queryExportOrderTaskRecords({export_order_id})
-    #tb_fac_reqs.download(download_urls[export_order_id], 'test.xlsx')
-    #object_id = tb_fac_reqs.exportSettleBill('2024-10-01', '2024-10-10')
-    object_link = tb_fac_reqs.querySingleExportSettleBillRecord(object_id='YWVNTHRwemJRNmJsRlN0bk5xMDM2cFdNTWdGb211VEV4bjloVndnZVd3c2wycXE0WW9NOVpPbHJmQ2pkZUpBZ0VrcHZhN3pVSnJSTWcxcmpmNnJxelRvblFOUVViNHU5UzhJLzVITzhxS1E9')
-    tb_fac_reqs.download(object_link, 'test_object.zip')
+    #sub.check_call('rm -rf output && mkdir -p output', shell=True)
+    #TBFactoryDumper(Conf('conf.json').load(['cookie'])).dump_all('2024-09-01', '2024-10-11',
+    #                                            '2024-09-01', '2024-10-11')
+    df = Reporter().report()
+    df.to_csv('report.csv', index=False)
+    #Summary(df).dumpLinkSkuTable('resource/dump_link_sku_table.csv')
+    df = Summary(df).calcProfit('resource/link_sku_table.csv')
+    df.to_csv('profit.csv', index=False)

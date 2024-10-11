@@ -1,16 +1,67 @@
 import datetime
 import requests
 import json
-from typing import Mapping, Set
-
+from typing import Dict, Set
 
 # 如果需要结合历史做到查重不重不漏，需要多查去重
+# 淘宝商家页面非必要传参乱，实现比较乱。网页下载是轮询实现
 class TBFactoryReqs(object):
     BROWSER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+
+    BILLTYPE_SUPPLIER_MARKETING = 'SUPPLIER_MARKETING' # 营销推广套餐佣金
+    BILLTYPE_ADVERTISING_CHARGE = 'ADVERTISING_CHARGE' # 广告代投账单
+    BILLTYPE_ALL_SITE_CHANNEL_PROMOTION = 'ALL_SITE_CHANNEL_PROMOTION' # 商品广告推广
+    BILLTYPE_CREDIT_BUY = 'CREDIT_BUY' # 先用后付
+    BILLTYPE_FREIGHT_INSURANCE = 'FREIGHT_INSURANCE' # 运费险
+
     def __init__(self, cookie: str) -> None:
         self._cookie = cookie
+    
+    # 明细（活动等）导出 & 查询
+    def exportDetail(self, billtype: str, bill_date_start: str, bill_date_end: str) -> str: # 返回对象标识
+        headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'cookie': self._cookie,
+            'user-agent': TBFactoryReqs.BROWSER_AGENT,
+            'content-type': 'application/json;charset=UTF-8', 
+        }
+        body = {
+            'billType': billtype,
+            "billDateStart": bill_date_start,
+            "billDateEnd": bill_date_end,
+        }
+        resp = requests.post('https://tgc.tmall.com/ds/api/v1/finance/bill/common/export', headers=headers, data=json.dumps(body))
+        if not resp.ok:
+            raise Exception('req export detail status code: {}'.format(resp.status_code))
+        resp_json = resp.json()
+        if resp_json['success']:
+            print('export detail data: {}'.format(resp_json['data']['objectName']))
+            return resp_json['data']['objectName']
+        raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
-    # 结算明细导出 & 查询
+    def querySingleExportDetailRecord(self, object_id: str) -> str: # 返回下载链接
+        headers = {
+            'accept': 'application/json, text/json',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'cookie': self._cookie,
+            'user-agent': TBFactoryReqs.BROWSER_AGENT,
+            'content-type': 'application/json', 
+        }
+        body = {
+            'key': object_id,
+        }
+        resp = requests.post('https://tgc.tmall.com/ds/api/v1/finance/bill/getExportFileUrl', headers=headers, data=json.dumps(body))
+        if not resp.ok:
+            raise Exception('query single export detail status code: {}'.format(resp.status_code))
+        resp_json = resp.json()
+        if resp_json['success']:
+            print('query single export detail data: {}'.format(resp_json['data']))
+            return resp_json['data']
+        raise Exception('query single export detail not found: {}'.format(object_id))
+ 
+
+    # 结算导出 & 查询
 
     def exportSettleBill(self, bill_date_start: str, bill_date_end: str) -> str: # 返回对象标识
         headers = {
@@ -62,7 +113,7 @@ class TBFactoryReqs(object):
 
     def exportOrder(self, order_pay_date_start: str, order_pay_date_end: str) -> int: # 返回任务id
         start = datetime.datetime.strptime(order_pay_date_start, '%Y-%m-%d')
-        end = datetime.datetime.strptime(order_pay_date_end, '%Y-%m-%d')
+        end = datetime.datetime.strptime(order_pay_date_end, '%Y-%m-%d') + datetime.timedelta(days=1)
         params = {
             'payTimeStart': int(datetime.datetime.timestamp(start)) * 1000,
             'payTimeEnd': int(datetime.datetime.timestamp(end)) * 1000,
@@ -82,7 +133,7 @@ class TBFactoryReqs(object):
             return int(resp_json['data'])
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
     
-    def queryExportOrderTaskRecords(self, task_ids: Set[int]) -> Mapping[int, None|str]: # 根据任务id查找任务结果下载链接（最近100条），任务还在执行返回None
+    def queryExportOrderTaskRecords(self, task_ids: Set[int]) -> Dict[int, None|str]: # 根据任务id查找任务结果下载链接（最近100条），任务还在执行返回None
         params = {
             'pageNo': 1,
             'pageSize': 100
@@ -114,7 +165,7 @@ class TBFactoryReqs(object):
 
     # 下载
 
-    def download(self, url: str, filename: str) -> str:
+    def download(self, url: str, filepath: str) -> str:
         headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
@@ -125,7 +176,6 @@ class TBFactoryReqs(object):
         resp = requests.get(url=url, headers=headers)
         if not resp.ok:
             raise Exception('download status code: {}'.format(resp.status_code))
-        filepath = 'output/{}'.format(filename)
         with open(filepath, 'wb') as f:
             f.write(resp.content)
         return filepath

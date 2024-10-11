@@ -1,1 +1,1 @@
-from .tb_factory import TBFactoryReqs
+from .tb_factory_reqs import TBFactoryReqs
