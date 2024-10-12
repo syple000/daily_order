@@ -2,6 +2,9 @@ import datetime
 import requests
 import json
 from typing import Dict, Set
+import time
+
+from ..utils import retry
 
 # 如果需要结合历史做到查重不重不漏，需要多查去重
 # 淘宝商家页面非必要传参乱，实现比较乱。网页下载是轮询实现
@@ -18,6 +21,7 @@ class TBFactoryReqs(object):
         self._cookie = cookie
 
     # 退款导出 & 查询
+    @retry()
     def exportRefundOrder(self, apply_date_start: str, apply_date_end: str) -> str: # 返回任务id
         start = datetime.datetime.strptime(apply_date_start, '%Y-%m-%d')
         end = datetime.datetime.strptime(apply_date_end, '%Y-%m-%d') + datetime.timedelta(days=1)
@@ -41,6 +45,7 @@ class TBFactoryReqs(object):
             return resp_json['data']
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
+    @retry()
     def querySingleRefundOrderRecord(self, task_id: str) -> str: # 返回下载链接
         headers = {
             'accept': 'application/json, text/plain, */*',
@@ -56,12 +61,15 @@ class TBFactoryReqs(object):
             raise Exception('query single refund order status code: {}'.format(resp.status_code))
         resp_json = resp.json()
         if resp_json['success']:
+            if resp_json['data']['download'] is None:
+                raise Exception('query single export refund order null')
             print('query single export refund order data: {}'.format(resp_json['data']['download']))
             return resp_json['data']['download']
         raise Exception('query single export refund order not found: {}'.format(task_id))
  
     
     # 明细（活动等）导出 & 查询
+    @retry()
     def exportDetail(self, billtype: str, bill_date_start: str, bill_date_end: str) -> str: # 返回对象标识
         headers = {
             'accept': 'application/json, text/plain, */*',
@@ -84,6 +92,7 @@ class TBFactoryReqs(object):
             return resp_json['data']['objectName']
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
+    @retry()
     def querySingleExportDetailRecord(self, object_id: str) -> str: # 返回下载链接
         headers = {
             'accept': 'application/json, text/json',
@@ -100,13 +109,15 @@ class TBFactoryReqs(object):
             raise Exception('query single export detail status code: {}'.format(resp.status_code))
         resp_json = resp.json()
         if resp_json['success']:
+            if resp_json['data'] is None:
+                raise Exception('query single export detail null')
             print('query single export detail data: {}'.format(resp_json['data']))
             return resp_json['data']
         raise Exception('query single export detail not found: {}'.format(object_id))
  
 
     # 结算导出 & 查询
-
+    @retry()
     def exportSettleBill(self, bill_date_start: str, bill_date_end: str) -> str: # 返回对象标识
         headers = {
             'accept': 'application/json, text/json',
@@ -133,6 +144,7 @@ class TBFactoryReqs(object):
             return resp_json['data']['objectName']
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
+    @retry()
     def querySingleExportSettleBillRecord(self, object_id: str) -> None|str: # 返回下载链接
         params = {
             'objectName': object_id,
@@ -148,6 +160,8 @@ class TBFactoryReqs(object):
             raise Exception('query single export settle bill status code: {}'.format(resp.status_code))
         resp_json = resp.json()
         if resp_json['success']:
+            if resp_json['data'] is None:
+                raise Exception('query single export settle bill null')
             print('query single export settle bill data: {}'.format(resp_json['data']))
             return resp_json['data']
         raise Exception('query single export settle bill not found: {}'.format(object_id))
@@ -155,6 +169,7 @@ class TBFactoryReqs(object):
  
     # 订单导出 & 查询
 
+    @retry()
     def exportOrder(self, order_pay_date_start: str, order_pay_date_end: str) -> int: # 返回任务id
         start = datetime.datetime.strptime(order_pay_date_start, '%Y-%m-%d')
         end = datetime.datetime.strptime(order_pay_date_end, '%Y-%m-%d') + datetime.timedelta(days=1)
@@ -177,6 +192,7 @@ class TBFactoryReqs(object):
             return int(resp_json['data'])
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
     
+    @retry()
     def queryExportOrderTaskRecords(self, task_ids: Set[int]) -> Dict[int, None|str]: # 根据任务id查找任务结果下载链接（最近100条），任务还在执行返回None
         params = {
             'pageNo': 1,
@@ -198,7 +214,7 @@ class TBFactoryReqs(object):
             if id not in task_ids:
                 continue
             if record['status'] == '导出处理中':
-                id_url_map[id] = None
+                raise Exception('query export orders null')
             if record['status'] == '导出成功' and int(record['percent']) == 100 and int(record['errorCount']) == 0:
                 print('task record: {}, {}'.format(id, record['fileDownList'][0]['downUrl']))
                 id_url_map[id] = record['fileDownList'][0]['downUrl']
@@ -209,6 +225,7 @@ class TBFactoryReqs(object):
 
     # 下载
 
+    @retry()
     def download(self, url: str, filepath: str) -> str:
         headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -218,7 +235,7 @@ class TBFactoryReqs(object):
         }
         if not url.startswith('https'):
             headers['upgrade-insecure-requests'] = '1'
-        resp = requests.get(url=url, headers=headers)
+        resp = requests.get(url=url, headers=headers, timeout=10)
         if not resp.ok:
             raise Exception('download status code: {}'.format(resp.status_code))
         with open(filepath, 'wb') as f:

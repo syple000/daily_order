@@ -100,7 +100,6 @@ class Summary(object):
     def calcProfit(self) -> pd.DataFrame:
         df = pd.merge(self._report_df, self._link_sku_table, how='left', on=['LinkId', 'SkuName'])
         if df['Cost'].isnull().any():
-            import pdb; pdb.set_trace()
             raise Exception('link sku not found: {}'.format(df[df['Cost'].isnull()][['LinkId', 'SkuName']].groupby(['LinkId', 'SkuName']).size().reset_index(name='Count')))
         # 计算出平台基础佣金（实际付款-结算金额）
         df['PlatformCommisionFee'] = df['SubActualTotalFee'] - df['RefundFee'] - df['TotalSettleAmount']

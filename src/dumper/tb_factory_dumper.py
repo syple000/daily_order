@@ -25,37 +25,19 @@ class TBFactoryDumper(object):
         # 导出
         id = self._reqs.exportRefundOrder(apply_date_start=apply_date_start, apply_date_end=apply_date_end)
         print('export refund orders from {} to {}, task id: {}'.format(apply_date_start, apply_date_end, id))
-        # 循环等待N次，直至导出完成
-        download_url = None
-        for _ in range(5):
-            print('wait order export done. 3 seconds...')
-            time.sleep(3)
-            url = self._reqs.querySingleRefundOrderRecord(id)
-            if url is not None:
-                download_url = url
-                break
-        if download_url is None:
-            raise Exception('export refund orders from {} to {} fail!'.format())
+        time.sleep(3)
+        download_url = self._reqs.querySingleRefundOrderRecord(id)
         # 下载
         return self._reqs.download(download_url, 'output/refund_orders.xlsx')
-
 
 
     def dumpOrders(self, pay_date_start: str, pay_date_end: str) -> str:
         # 导出
         id = self._reqs.exportOrder(order_pay_date_start=pay_date_start, order_pay_date_end=pay_date_end)
         print('export orders from {} to {}, export id: {}'.format(pay_date_start, pay_date_end, id))
-        # 循环等待N次，直至导出完成
-        download_url = None
-        for _ in range(5):
-            print('wait order export done. 3 seconds...')
-            time.sleep(3)
-            id_records = self._reqs.queryExportOrderTaskRecords({id})
-            if id_records[id] is not None:
-                download_url = id_records[id]
-                break
-        if download_url is None:
-            raise Exception('export orders from {} to {} fail!'.format())
+        time.sleep(3)
+        id_records = self._reqs.queryExportOrderTaskRecords({id})
+        download_url = id_records[id]
         # 下载
         return self._reqs.download(download_url, 'output/orders.xlsx')
 
@@ -63,17 +45,8 @@ class TBFactoryDumper(object):
         # 导出
         id = self._reqs.exportSettleBill(bill_date_start=bill_date_start, bill_date_end=bill_date_end)
         print('export settle bill from {} to {}, export id: {}'.format(bill_date_start, bill_date_end, id))
-        # 循环等待N次，直至导出完成
-        download_url = None
-        for _ in range(5):
-            print('wait settle bill export done. 3 seconds...')
-            time.sleep(3)
-            url = self._reqs.querySingleExportSettleBillRecord(id)
-            if url is not None:
-                download_url = url
-                break
-        if download_url is None:
-            raise Exception('export settle bill from {} to {} fail!'.format(bill_date_start, bill_date_end))
+        time.sleep(3)
+        download_url = self._reqs.querySingleExportSettleBillRecord(id)
         # 下载
         filepath = 'output/settle_bill.zip'
         unzip_filepath = 'output/settle_bill'
@@ -87,17 +60,8 @@ class TBFactoryDumper(object):
         # 导出
         id = self._reqs.exportDetail(billtype, bill_date_start=bill_date_start, bill_date_end=bill_date_end)
         print('export detail: {}, from {} to {}, export id: {}'.format(billtype, bill_date_start, bill_date_end, id))
-        # 循环等待N次，直至导出完成
-        download_url = None
-        for _ in range(5):
-            print('wait {} detail export done. 3 seconds...'.format(billtype))
-            time.sleep(3)
-            url = self._reqs.querySingleExportDetailRecord(id)
-            if url is not None:
-                download_url = url
-                break
-        if download_url is None:
-            raise Exception('export detail: {}, from {} to {} fail!'.format(billtype, bill_date_start, bill_date_end))
+        time.sleep(3)
+        download_url = self._reqs.querySingleExportDetailRecord(id)
         # 下载
         filepath = 'output/{}.zip'.format(billtype)
         unzip_filepath = 'output/{}'.format(billtype)
