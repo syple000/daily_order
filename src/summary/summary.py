@@ -48,7 +48,7 @@ class Summary(object):
     def dumpArchive(self, df: pd.DataFrame, dir: str):
         sub.check_call('mkdir -p {} & rm -rf {}/*'.format(dir, dir), shell=True) 
         # 落详情
-        df.to_csv(os.path.join(dir, '详情.csv'))
+        df.to_excel(os.path.join(dir, '详情.xlsx'))
         # 按链接&sku计算货款
         facpay_count_df = df.groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).size().reset_index(name='Count')
         facpay_amount_df = df.groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).agg({
@@ -57,7 +57,7 @@ class Summary(object):
         facpay_df = pd.merge(facpay_count_df, facpay_amount_df, how='left', on=['LinkId', 'SkuName', 'OnRoadFacPayment'])
         facpay_df = facpay_df.sort_values(['OnRoadFacPayment', 'Count', 'LinkId', 'SkuName'], ascending=False)
         facpay_df['FacPayment'] = facpay_df['FacPayment'].apply(lambda x: round(x, 2))
-        facpay_df.to_csv(os.path.join(dir, '货款.csv'))
+        facpay_df.to_excel(os.path.join(dir, '货款.xlsx'))
         # 总共货款
         with open(os.path.join(dir, '总货款.txt'), 'w') as f:
             f.write('总货款: {}'.format(round(facpay_df['FacPayment'].sum(), 2)))
@@ -69,7 +69,7 @@ class Summary(object):
         df = pd.merge(trade_done_df, profit_df, how='left', on=['LinkId', 'SkuName', 'TradeDone'])
         df = df.sort_values(['TradeDone', 'Count', 'LinkId', 'SkuName'], ascending=False)
         df['Profit'] = df['Profit'].apply(lambda x: round(x, 2))
-        df.to_csv(os.path.join(dir, '利润.csv'))
+        df.to_excel(os.path.join(dir, '利润.xlsx'))
         # 总利润
         with open(os.path.join(dir, '总利润.txt'), 'w') as f:
             f.write('总利润: {}'.format(round(df['Profit'].sum(), 2)))
