@@ -16,6 +16,50 @@ class TBFactoryReqs(object):
 
     def __init__(self, cookie: str) -> None:
         self._cookie = cookie
+
+    # 退款导出 & 查询
+    def exportRefundOrder(self, apply_date_start: str, apply_date_end: str) -> str: # 返回任务id
+        start = datetime.datetime.strptime(apply_date_start, '%Y-%m-%d')
+        end = datetime.datetime.strptime(apply_date_end, '%Y-%m-%d') + datetime.timedelta(days=1)
+        body = {
+            'refundApplyStartTime': start.strftime('%Y-%m-%d %H:%M:%S'),
+            'refundApplyEndTime': (end + datetime.timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
+        }
+        headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'cookie': self._cookie,
+            'user-agent': TBFactoryReqs.BROWSER_AGENT,
+            'content-type': 'application/json;charset=UTF-8', 
+        }
+        resp = requests.post('https://tgc.tmall.com/ds/api/v1/supplier/refund/gei/exportServeDatas', headers=headers, data=json.dumps(body))
+        if not resp.ok:
+            raise Exception('req export refund order status code: {}'.format(resp.status_code))
+        resp_json = resp.json()
+        if resp_json['success']:
+            print('export refund order data: {}'.format(resp_json['data']))
+            return resp_json['data']
+        raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
+
+    def querySingleRefundOrderRecord(self, task_id: str) -> str: # 返回下载链接
+        headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'cookie': self._cookie,
+            'user-agent': TBFactoryReqs.BROWSER_AGENT,
+        }
+        params = {
+            'taskId': task_id,
+        }
+        resp = requests.get('https://tgc.tmall.com/ds/api/v1/supplier/refund/gei/queryExportProgress', headers=headers, params=params)
+        if not resp.ok:
+            raise Exception('query single refund order status code: {}'.format(resp.status_code))
+        resp_json = resp.json()
+        if resp_json['success']:
+            print('query single export refund order data: {}'.format(resp_json['data']['download']))
+            return resp_json['data']['download']
+        raise Exception('query single export refund order not found: {}'.format(task_id))
+ 
     
     # 明细（活动等）导出 & 查询
     def exportDetail(self, billtype: str, bill_date_start: str, bill_date_end: str) -> str: # 返回对象标识
@@ -170,9 +214,10 @@ class TBFactoryReqs(object):
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'cookie': self._cookie,
-            'upgrade-insecure-requests': '1',
             'user-agent': TBFactoryReqs.BROWSER_AGENT,
         }
+        if not url.startswith('https'):
+            headers['upgrade-insecure-requests'] = '1'
         resp = requests.get(url=url, headers=headers)
         if not resp.ok:
             raise Exception('download status code: {}'.format(resp.status_code))

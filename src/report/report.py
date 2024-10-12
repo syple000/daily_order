@@ -12,12 +12,28 @@ class Reporter(object):
     def __init__(self) -> None: # 预期output下有数据！
         self._dir = 'output'
         self._orders_file = 'orders.xlsx'
+        self._refund_orders_file = 'refund_orders.xlsx'
         self._settle_bill_file = 'settle_bill.xlsx'
         self._advertising_charge_file = 'ADVERTISING_CHARGE.xlsx'
         self._all_site_channel_promotion_file = 'ALL_SITE_CHANNEL_PROMOTION.xlsx'
         self._credit_buy_file = 'CREDIT_BUY.xlsx'
         self._freight_insurance_file = 'FREIGHT_INSURANCE.xlsx'
         self._supplier_marketing_file = 'SUPPLIER_MARKETING.xlsx'
+
+    def adCharge(self) -> float:
+        df: pd.DataFrame = self.loadXlsx(os.path.join(self._dir, self._advertising_charge_file), usecols=[
+            '金额',
+            '付款类型'
+        ], dtype={
+            '金额': float,
+            '付款类型': str,
+        })
+        df = df.rename(columns={
+            '金额': 'Cost',
+            '付款类型': 'Dir',
+        })
+        df = df[df['Dir'] == '扣款']
+        return round(df['Cost'].sum(), 2)
 
     def report(self) -> pd.DataFrame:
         orders = self.loadOrders()
@@ -26,15 +42,14 @@ class Reporter(object):
         supplier_marketing = self.loadSupplierMarketing()
         all_site = self.loadAllSiteChannelPromotion()
         credit_buy = self.loadCreditBuy()
+        refund_orders = self.loadRefundOrders()
         # 先聚合导出看看，我也不清楚后台规则
-        df = pd.merge(orders, settle, how='outer', on='SubTradeId')
-        df = pd.merge(df, freight_insurance, how='outer', on='SubTradeId')
-        df = pd.merge(df, supplier_marketing, how='outer', on='SubTradeId')
-        df = pd.merge(df, all_site, how='outer', on='SubTradeId')
-        df = pd.merge(df, credit_buy, how='outer', on='SubTradeId')
-        # 确认是否有订单中关联不上的收费(如果有，请看看是不是拉错范围了，一般订单范围要大于其它)
-        if df['TradeId'].isnull().any():
-            raise Exception('fee not in trade: {}'.format(df[df['TradeId'].isnull()]))
+        df = pd.merge(orders, settle, how='left', on='SubTradeId')
+        df = pd.merge(df, freight_insurance, how='left', on='SubTradeId')
+        df = pd.merge(df, supplier_marketing, how='left', on='SubTradeId')
+        df = pd.merge(df, all_site, how='left', on='SubTradeId')
+        df = pd.merge(df, credit_buy, how='left', on='SubTradeId')
+        df = pd.merge(df, refund_orders, how='left', on='SubTradeId')
         df = df.sort_values(['OrderCreatedTs', 'LinkId', 'SubTradeId'], ascending=False)
         return df
     
@@ -44,6 +59,30 @@ class Reporter(object):
             dfxlsx = pd.read_excel(path, usecols=usecols, dtype=dtype)
             return dfxlsx
         raise Exception('load xlsx fail')
+
+    def loadRefundOrders(self) -> pd.DataFrame: # 退款订单
+        df: pd.DataFrame = self.loadXlsx(os.path.join(self._dir, self._refund_orders_file), usecols=[
+            '子订单编号',
+            '发货状态',
+            '退款状态'
+        ], dtype={
+            '子订单编号': str,
+            '发货状态': str,
+            '退款状态': str, 
+        })
+        df = df.rename(columns={
+            '子订单编号': 'SubTradeId',
+            '发货状态': 'ShippingStatus',
+            '退款状态': 'RefundStatus'
+        })
+        df = df[df['RefundStatus'] == '退款成功']
+        if df.isnull().any().any():
+            raise Exception('refund order null data: {}'.format(df.isnull().any()))
+        id_df = df[['SubTradeId']].groupby('SubTradeId').size().reset_index(name='Count')
+        abnormal_id_df = id_df[id_df['Count'] != 1]
+        if len(abnormal_id_df) != 0:
+            raise Exception('refund order sub trade id duplicated: {}'.format(abnormal_id_df))
+        return df
 
     def loadCreditBuy(self) -> pd.DataFrame: # 先用后付
         df: pd.DataFrame = self.loadXlsx(os.path.join(self._dir, self._credit_buy_file), usecols=[

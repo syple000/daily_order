@@ -4,13 +4,15 @@ import json
 import datetime
 import subprocess as sub
 import os
+import warnings
 
 class Summary(object):
-    def __init__(self, report_df: pd.DataFrame):
+    def __init__(self, report_df: pd.DataFrame, ad_charge: float):
         link_sku_table_filepath = 'resource/link_sku_table.csv'
         fake_trade_filepath = 'resource/fake_trade.json'
 
         self._report_df = report_df
+        self._ad_charge = ad_charge
 
         self._link_sku_table = pd.read_csv(link_sku_table_filepath, usecols=[
             'LinkId',
@@ -33,6 +35,15 @@ class Summary(object):
 
         with open(fake_trade_filepath) as f:
             self._fake_trade = set(json.load(f))
+    
+    def dumpLinkSkuTable(self, filepath: str) -> str: # 请不要调用，测试用
+        df = self._report_df.groupby(['LinkId', 'SkuName']).agg({'Amount': 'sum'}).reset_index()[['LinkId', 'SkuName']]
+        df['Cost'] = 4
+        df['PostFee'] = 2
+        df['Price'] = 7
+        df = df.sort_values(['LinkId', 'SkuName'])
+        df.to_csv(filepath, index=False)
+        return filepath
 
     def dumpArchive(self, df: pd.DataFrame, dir: str):
         sub.check_call('mkdir -p {} & rm -rf {}/*'.format(dir, dir), shell=True) 
@@ -45,15 +56,23 @@ class Summary(object):
         }).reset_index()
         facpay_df = pd.merge(facpay_count_df, facpay_amount_df, how='left', on=['LinkId', 'SkuName', 'OnRoadFacPayment'])
         facpay_df = facpay_df.sort_values(['OnRoadFacPayment', 'Count', 'LinkId', 'SkuName'], ascending=False)
+        facpay_df['FacPayment'] = facpay_df['FacPayment'].apply(lambda x: round(x, 2))
         facpay_df.to_csv(os.path.join(dir, '货款.csv'))
+        # 总共货款
+        with open(os.path.join(dir, '总货款.txt'), 'w') as f:
+            f.write('总货款: {}'.format(round(facpay_df['FacPayment'].sum(), 2)))
         # 按链接&sku计算利润
         trade_done_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).size().reset_index(name='Count')
         profit_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).agg({
             'Profit': 'sum'
-        })
+        }).reset_index()
         df = pd.merge(trade_done_df, profit_df, how='left', on=['LinkId', 'SkuName', 'TradeDone'])
         df = df.sort_values(['TradeDone', 'Count', 'LinkId', 'SkuName'], ascending=False)
+        df['Profit'] = df['Profit'].apply(lambda x: round(x, 2))
         df.to_csv(os.path.join(dir, '利润.csv'))
+        # 总利润
+        with open(os.path.join(dir, '总利润.txt'), 'w') as f:
+            f.write('总利润: {}'.format(round(df['Profit'].sum(), 2)))
 
     def archive(self, start_date: str, end_date: str):
         df = self.calcProfit()
@@ -73,12 +92,15 @@ class Summary(object):
             if start > end:
                 break
         df = pd.concat(l)
-        self.dumpArchive(df, os.path.join('archive', '{}To{}'.format(start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'))))
+        self.dumpArchive(df, os.path.join('archive', '{}To{}'.format(start_date, end_date)))
+        with open(os.path.join('archive', '{}To{}'.format(start_date, end_date), '广告充值.txt'), 'w') as f:
+            f.write('广告充值，利润计算未包含这部分支出：{}'.format(self._ad_charge))
         
 
     def calcProfit(self) -> pd.DataFrame:
         df = pd.merge(self._report_df, self._link_sku_table, how='left', on=['LinkId', 'SkuName'])
         if df['Cost'].isnull().any():
+            import pdb; pdb.set_trace()
             raise Exception('link sku not found: {}'.format(df[df['Cost'].isnull()][['LinkId', 'SkuName']].groupby(['LinkId', 'SkuName']).size().reset_index(name='Count')))
         # 计算出平台基础佣金（实际付款-结算金额）
         df['PlatformCommisionFee'] = df['SubActualTotalFee'] - df['RefundFee'] - df['TotalSettleAmount']
@@ -93,13 +115,14 @@ class Summary(object):
 
         # 货款计算。cost * amount + postfee
         # 假设多件快递不变
-        # 必须有快递才有货款，不考虑退货
+        # 一个大订单拆成多个子单，但子单可以合并发货，快递仍然算多个子单
+        # 必须有快递才有货款。如果产生了真实发货，都算货款
         # 刷单不计算货款
-        df['OnRoadFacPayment'] = df[['ExpressNo', 'OrderStatus', 'FakeTrade']].apply(lambda x: len(x['ExpressNo']) == 0 and not x['FakeTrade'] and x['OrderStatus'] != '交易关闭', axis=1)
-        df['FacPayment'] = df[['Cost', 'Amount', 'PostFee', 'ExpressNo', 'FakeTrade']].apply(lambda x: x['Cost'] * x['Amount'] + x['PostFee'] if len(x['ExpressNo']) > 0 and not x['FakeTrade'] else float(0), axis=1)
+        df['OnRoadFacPayment'] = df[['ExpressNo', 'OrderStatus', 'FakeTrade']].apply(lambda x: len(x['ExpressNo']) == 0 and not x['FakeTrade'] and x['OrderStatus'] != '交易关闭' and x['OrderStatus'] != '交易成功', axis=1)
+        df['FacPayment'] = df[['Cost', 'Amount', 'PostFee', 'ExpressNo', 'FakeTrade', 'SubActualTotalFee', 'RefundFee', 'RefundStatus', 'ShippingStatus']].apply(lambda x: x['Cost'] * x['Amount'] + x['PostFee'] if len(x['ExpressNo']) > 0 and not x['FakeTrade'] and not (abs(x['SubActualTotalFee'] - x['RefundFee']) < 0.0001 and x['RefundStatus'] == '退款成功' and x['ShippingStatus'] == '未发货') else float(0), axis=1)
 
         # 交易生命周期是否完成
-        df['TradeDone'] = df[['TotalSettleAmount', 'OrderStatus']].apply(lambda x: not np.isnan(x['TotalSettleAmount']) or x['OrderStatus'] == '交易关闭', axis=1)
+        df['TradeDone'] = df[['SubActualTotalFee', 'RefundFee', 'TotalSettleAmount', 'OrderStatus']].apply(lambda x: not np.isnan(x['TotalSettleAmount']) or ((x['OrderStatus'] == '交易关闭' or x['OrderStatus'] == '交易成功') and abs(x['SubActualTotalFee'] - x['RefundFee']) < 0.0001), axis=1)
 
         # 真实利润计算
         # 结算或交易关闭后才可以计算
@@ -126,7 +149,7 @@ class Summary(object):
                 n = n - x['ASPCommisionFee']
 
             n = n - x['FacPayment']
-            return n
-        df['Profit'] = df[['TotalSettleAmount', 'TradeDone', 'CreditBuyFee', 'PlanFee', 'FreightInsuranceFee', 'ASPCommisionFee', 'FacPayment', 'FakeTrade', 'OnRoadFacPayment']].apply(lambda x: calc_profit(x), axis=1)
+            return round(n, 2)
+        df['Profit'] = df[['OrderStatus', 'TotalSettleAmount', 'TradeDone', 'CreditBuyFee', 'PlanFee', 'FreightInsuranceFee', 'ASPCommisionFee', 'FacPayment', 'FakeTrade', 'OnRoadFacPayment', 'SubActualTotalFee', 'RefundFee']].apply(lambda x: calc_profit(x), axis=1)
         return df
     

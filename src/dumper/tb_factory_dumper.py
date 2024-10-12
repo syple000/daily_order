@@ -9,14 +9,37 @@ class TBFactoryDumper(object):
         self._reqs = TBFactoryReqs(cookie=cookie)
 
     def dump_all(self, pay_date_start: str, pay_date_end: str,
-                 bill_date_start: str, bill_date_end: str):
+                 apply_date_start: str, apply_date_end: str,
+                 bill_date_start: str, bill_date_end: str,
+                 ad_charge_date_start: str, ad_charge_date_end: str):
         self.dumpOrders(pay_date_start, pay_date_end)
+        self.dumpRefundOrders(apply_date_start, apply_date_end)
         self.dumpSettleBill(bill_date_start, bill_date_end)
         self.dumpDetail(TBFactoryReqs.BILLTYPE_SUPPLIER_MARKETING, bill_date_start, bill_date_end)
         self.dumpDetail(TBFactoryReqs.BILLTYPE_FREIGHT_INSURANCE, bill_date_start, bill_date_end)
         self.dumpDetail(TBFactoryReqs.BILLTYPE_ALL_SITE_CHANNEL_PROMOTION, bill_date_start, bill_date_end)
-        self.dumpDetail(TBFactoryReqs.BILLTYPE_ADVERTISING_CHARGE, bill_date_start, bill_date_end)
         self.dumpDetail(TBFactoryReqs.BILLTYPE_CREDIT_BUY, bill_date_start, bill_date_end)
+        self.dumpDetail(TBFactoryReqs.BILLTYPE_ADVERTISING_CHARGE, ad_charge_date_start, ad_charge_date_end)
+
+    def dumpRefundOrders(self, apply_date_start: str, apply_date_end: str) -> str:
+        # 导出
+        id = self._reqs.exportRefundOrder(apply_date_start=apply_date_start, apply_date_end=apply_date_end)
+        print('export refund orders from {} to {}, task id: {}'.format(apply_date_start, apply_date_end, id))
+        # 循环等待N次，直至导出完成
+        download_url = None
+        for _ in range(5):
+            print('wait order export done. 3 seconds...')
+            time.sleep(3)
+            url = self._reqs.querySingleRefundOrderRecord(id)
+            if url is not None:
+                download_url = url
+                break
+        if download_url is None:
+            raise Exception('export refund orders from {} to {} fail!'.format())
+        # 下载
+        return self._reqs.download(download_url, 'output/refund_orders.xlsx')
+
+
 
     def dumpOrders(self, pay_date_start: str, pay_date_end: str) -> str:
         # 导出
