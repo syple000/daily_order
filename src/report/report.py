@@ -35,9 +35,6 @@ class Reporter(object):
         # 确认是否有订单中关联不上的收费(如果有，请看看是不是拉错范围了，一般订单范围要大于其它)
         if df['TradeId'].isnull().any():
             raise Exception('fee not in trade: {}'.format(df[df['TradeId'].isnull()]))
-        # 计算出平台基础佣金（实际付款-结算金额）
-        df['PlatformCommisionFee'] = df['SubActualTotalFee'] - df['RefundFee'] - df['TotalSettleAmount']
-        df['PlatformCommisionRate'] = df[['PlatformCommisionFee', 'SubActualTotalFee']].apply(lambda x: str(int(100 * x['PlatformCommisionFee'] / x['SubActualTotalFee']))+'%' if not np.isnan(x['PlatformCommisionFee']) else np.nan, axis=1)
         df = df.sort_values(['OrderCreatedTs', 'LinkId', 'SubTradeId'], ascending=False)
         return df
     
@@ -230,7 +227,7 @@ class Reporter(object):
             '物流单号': 'ExpressNo'
         })
         df['SkuName'] = df['SkuName'].apply(lambda x: x[len('颜色分类:'):] if x.startswith('颜色分类:') else x)
-        df['OrderDate'] = df['OrderCreatedTime'].apply(lambda x: x.split(' ')[0])
+        df['OrderDate'] = df['OrderCreatedTime'].apply(lambda x: datetime.datetime.strptime(x.split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d'))
         df['OrderCreatedTs'] = df['OrderCreatedTime'].apply(lambda x: int(datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S').timestamp()))
         # 检查数据
         # 1. 主键必须唯一
