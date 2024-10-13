@@ -43,6 +43,8 @@ class TBFactoryReqs(object):
         if resp_json['success']:
             print('export refund order data: {}'.format(resp_json['data']))
             return resp_json['data']
+        if '导出数量必须大于0' in resp_json['errorMessage']:
+            return None
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
     @retry()
@@ -88,8 +90,10 @@ class TBFactoryReqs(object):
             raise Exception('req export detail status code: {}'.format(resp.status_code))
         resp_json = resp.json()
         if resp_json['success']:
-            print('export detail data: {}'.format(resp_json['data']['objectName']))
+            print('export detail data {}: {}'.format(billtype, resp_json['data']['objectName']))
             return resp_json['data']['objectName']
+        if '导出数量必须大于0' in resp_json['errorMessage']:
+            return None
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
     @retry()
@@ -142,6 +146,8 @@ class TBFactoryReqs(object):
         if resp_json['success']:
             print('export settle bill data: {}'.format(resp_json['data']['objectName']))
             return resp_json['data']['objectName']
+        if '导出数量必须大于0' in resp_json['errorMessage']:
+            return None
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
 
     @retry()
@@ -190,6 +196,8 @@ class TBFactoryReqs(object):
         if resp_json['success']:
             print('export order data: {}'.format(resp_json['data']))
             return int(resp_json['data'])
+        if '导出数量必须大于0' in resp_json['errorMessage']:
+            return None
         raise Exception('resp fail: {}'.format(json.dumps(resp_json)))
     
     @retry()
@@ -228,8 +236,8 @@ class TBFactoryReqs(object):
     @retry()
     def download(self, url: str, filepath: str) -> str:
         headers = {
-            #'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            #'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'cookie': self._cookie,
             'upgrade-insecure-requests': '1',
             'user-agent': TBFactoryReqs.BROWSER_AGENT,
@@ -240,3 +248,13 @@ class TBFactoryReqs(object):
         with open(filepath, 'wb') as f:
             f.write(resp.content)
         return filepath
+
+    @retry()
+    def download_noheaders(self, url: str, filepath: str) -> str:
+        resp = requests.get(url=url, timeout=10)
+        if not resp.ok:
+            raise Exception('download no headers status code: {}'.format(resp.status_code))
+        with open(filepath, 'wb') as f:
+            f.write(resp.content)
+        return filepath
+

@@ -49,10 +49,12 @@ class Summary(object):
         sub.check_call('mkdir -p {} & rm -rf {}/*'.format(dir, dir), shell=True) 
         # 落详情
         df.to_excel(os.path.join(dir, '详情.xlsx'))
-        # 按链接&sku计算货款
-        facpay_count_df = df.groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).size().reset_index(name='Count')
-        facpay_amount_df = df.groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).agg({
-            'FacPayment': 'sum'
+        # 按链接&sku计算货款（排除刷单）
+        facpay_count_df = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).size().reset_index(name='Count')
+        facpay_amount_df = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName', 'OnRoadFacPayment']).agg({
+            'FacPayment': 'sum',
+            'SubActualTotalFee': 'sum',
+            'RefundFee': 'sum'
         }).reset_index()
         facpay_df = pd.merge(facpay_count_df, facpay_amount_df, how='left', on=['LinkId', 'SkuName', 'OnRoadFacPayment'])
         facpay_df = facpay_df.sort_values(['OnRoadFacPayment', 'Count', 'LinkId', 'SkuName'], ascending=False)
@@ -64,15 +66,28 @@ class Summary(object):
         # 按链接&sku计算利润
         trade_done_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).size().reset_index(name='Count')
         profit_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).agg({
-            'Profit': 'sum'
+            'Profit': 'sum',
         }).reset_index()
-        df = pd.merge(trade_done_df, profit_df, how='left', on=['LinkId', 'SkuName', 'TradeDone'])
-        df = df.sort_values(['TradeDone', 'Count', 'LinkId', 'SkuName'], ascending=False)
-        df['Profit'] = df['Profit'].apply(lambda x: round(x, 2))
-        df.to_excel(os.path.join(dir, '利润.xlsx'))
+        pdf = pd.merge(trade_done_df, profit_df, how='left', on=['LinkId', 'SkuName', 'TradeDone'])
+        pdf = pdf.sort_values(['TradeDone', 'Count', 'LinkId', 'SkuName'], ascending=False)
+        pdf['Profit'] = pdf['Profit'].apply(lambda x: round(x, 2))
+        pdf.to_excel(os.path.join(dir, '利润.xlsx'))
         # 总利润
         with open(os.path.join(dir, '总利润.txt'), 'w') as f:
-            f.write('总利润: {}'.format(round(df['Profit'].sum(), 2)))
+            f.write('总利润: {}'.format(round(pdf['Profit'].sum(), 2)))
+        # 按链接&sku计算gmv/退款（排除刷单）
+        gmv_refund_count_df = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName']).size().reset_index(name='Count')
+        gmv_refund_df = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName']).agg({
+            'SubActualTotalFee': 'sum',
+            'RefundFee': 'sum'
+        }).reset_index()
+        grdf = pd.merge(gmv_refund_count_df, gmv_refund_df, how='left', on=['LinkId', 'SkuName'])
+        grdf = grdf.sort_values(['LinkId', 'Count', 'SkuName'], ascending=False)
+        grdf.to_excel(os.path.join(dir, 'GMV退款.xlsx'))
+        # 总gmv/退款
+        with open(os.path.join(dir, '总GMV退款.txt'), 'w') as f:
+            f.write('总GMV: {}, 总退款: {}'.format(round(grdf['SubActualTotalFee'].sum(), 2), round(grdf['RefundFee'].sum(), 2)))
+
 
     def archive(self, start_date: str, end_date: str):
         df = self.calcProfit()
