@@ -2,7 +2,6 @@ import datetime
 import requests
 import json
 from typing import Dict, Set
-import time
 
 from ..utils import retry
 
