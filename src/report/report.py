@@ -75,7 +75,7 @@ class Reporter(object):
             '发货状态': 'ShippingStatus',
             '退款状态': 'RefundStatus'
         })
-        df = df[df['RefundStatus'] == '退款成功']
+        df = df[df['RefundStatus'] == '退款成功'].groupby(['SubTradeId', 'ShippingStatus', 'RefundStatus']).size().reset_index(name='Count')[['SubTradeId', 'ShippingStatus', 'RefundStatus']]
         if df.isnull().any().any():
             raise Exception('refund order null data: {}'.format(df.isnull().any()))
         id_df = df[['SubTradeId']].groupby('SubTradeId').size().reset_index(name='Count')
@@ -265,7 +265,15 @@ class Reporter(object):
             '商品编码': 'LinkId', # 购买的链接
             '物流单号': 'ExpressNo'
         })
-        df['SkuName'] = df['SkuName'].apply(lambda x: x[len('颜色分类:'):] if x.startswith('颜色分类:') else x)
+        def deal_sku_name(x: str) -> str:
+            l = x.split(';')
+            for e in l:
+                el = e.split(':')
+                if el[0] != '颜色分类':
+                    continue
+                return el[1].replace('\t', '') # 处理异常字符
+            raise Exception('sku name exception: {}'.format(x))
+        df['SkuName'] = df['SkuName'].apply(lambda x: deal_sku_name(x))
         df['OrderDate'] = df['OrderCreatedTime'].apply(lambda x: datetime.datetime.strptime(x.split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d'))
         df['OrderCreatedTs'] = df['OrderCreatedTime'].apply(lambda x: int(datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S').timestamp()))
         # 检查数据

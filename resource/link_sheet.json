@@ -1,0 +1,72 @@
+{
+    "835597084042": {
+        "sheet": "电动车车衣-tmr-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 33
+    },
+    "832897408610": {
+        "sheet": "电动车车衣-tmr-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 33
+    },
+    "836519881819": {
+        "sheet": "电动车车衣-tmr-02",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 20
+    },
+    "836896586402": {
+        "sheet": "电动车坐垫-zx-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 19
+    },
+    "835425008983": {
+        "sheet": "电动车坐垫-zx-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 19
+    },
+    "838051916239": {
+        "sheet": "手持高压水枪-tmr-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 35
+    },
+    "839506085657": {
+        "sheet": "汽车毛绒坐垫-zx-01",
+        "fac_name": "车衣厂家",
+        "start_row": 3,
+        "end_row": 32,
+        "replace_char": {
+            "❤️": "??"
+        }
+    },
+    "846249897772": {
+        "sheet": "护膝-zx-01",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 27,
+        "replace_char": {
+            "❤️": "??"
+        }
+    },
+    "846827929579": {
+        "sheet": "护膝-zx-02",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 39,
+        "replace_char": {
+            "❤️": "??",
+            "⭐": "??"
+        }
+    },
+    "847118432608": {
+        "sheet": "发热鞋垫-zx-02",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 11
+    }
+}
