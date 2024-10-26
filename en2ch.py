@@ -20,6 +20,12 @@ def detail_en2ch(path: str):
     df['Retain'] = df['TradeId'].apply(lambda x: x in target_tradeids)
     df = df[df['Retain']]
 
+    # 打印店管家中有，但导出不存在的订单编号
+    ids = set(df['TradeId'].to_list())
+    for id in target_tradeids:
+        if id not in ids:
+            print('店管家订单编号：{} 没有找到'.format(id))
+
     df = df.rename(columns={
         'SubTradeId': '子订单编号',
         'TradeId': '订单编号',
