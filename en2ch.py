@@ -38,15 +38,23 @@ def detail_en2ch(path: str):
         'ShippingStatus': '退款单发货状态',
         'RefundStatus': '退款状态',
         'FakeTrade': '是否刷单',
-        'FacPayment': '货款'
+        'FacPayment': '货款',
+        'FacName': '厂家名',
     }) 
-    df = df[['子订单编号', '订单编号', '订单状态', '数量', 'Sku名字', '链接Id', '订单创建时间', '快递号', '退款单发货状态', '退款状态', '是否刷单', '货款']]
+    df = df[['子订单编号', '订单编号', '订单状态', '数量', 'Sku名字', '链接Id', '订单创建时间', '快递号', '退款单发货状态', '退款状态', '是否刷单', '货款', '厂家名']]
     l = path.split('.')
     df.to_excel('.'.join(l[:len(l)-1]) + '-发货视角.xlsx', index=False)
 
     total = round(df['货款'].apply(lambda x: float(x)).sum(), 2)
     with open('.'.join(l[:len(l)-1]) + '-发货视角-汇总.txt', 'w') as f:
         f.write('发货总货款: {}'.format(total))
+
+    # 统计区分厂家的发货数据
+    df['货款'] = df['货款'].astype(float)
+    fac_df = df.groupby(['厂家名']).agg({
+        '货款': 'sum'
+    }).reset_index()
+    fac_df.to_excel('.'.join(l[:len(l)-1]) + '-发货视角-厂家货款.xlsx', index=False)
 
 if __name__ == '__main__':
     import argparse

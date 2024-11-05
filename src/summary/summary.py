@@ -27,11 +27,14 @@ class Summary(object):
             df = None
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
-                df = pd.read_excel(price_filepath, sheet_name=sheet, usecols=[0, 2, 3, 6], dtype=str, skiprows=start_row, nrows=end_row-start_row, header=None)
-            df.columns = ['SkuName', 'Cost', 'PostFee', 'Price']
+                df = pd.read_excel(price_filepath, sheet_name=sheet, usecols=[0, 2, 3, 6, 10], dtype=str, skiprows=start_row, nrows=end_row-start_row, header=None)
+            df.columns = ['SkuName', 'Cost', 'PostFee', 'Price', 'FacName']
             df[['Cost', 'PostFee', 'Price']] = df[['Cost', 'PostFee', 'Price']].astype(float)
             df['LinkId'] = link
-            df['FacName'] = link_sheet_conf[link]['fac_name']
+            if df['FacName'].isnull().any(): # 如果有空值，赋值配置中的厂家名
+                df['FacName'] = link_sheet_conf[link]['fac_name']
+            else:
+                print('厂家名已经配置：{}'.format(sheet))
             if 'rename_cols' in link_sheet_conf[link]:
                 df['SkuName'] = df['SkuName'].apply(lambda x: link_sheet_conf[link]['rename_cols'][x] if x in link_sheet_conf[link]['rename_cols'] else x)
             if 'replace_char' in link_sheet_conf[link]:
@@ -76,6 +79,15 @@ class Summary(object):
         facpay_df = facpay_df.sort_values(['OnRoadFacPayment', 'Count', 'LinkId', 'SkuName'], ascending=False)
         facpay_df['FacPayment'] = facpay_df['FacPayment'].apply(lambda x: round(x, 2))
         facpay_df.to_excel(os.path.join(dir, '货款.xlsx'))
+        # 按厂家计算货款
+        facpay_count_df2 = df[df['FakeTrade'] == False].groupby(['FacName', 'OnRoadFacPayment']).size().reset_index(name='Count')
+        facpay_amount_df2 = df[df['FakeTrade'] == False].groupby(['FacName', 'OnRoadFacPayment']).agg({
+            'FacPayment': 'sum',
+            'SubActualTotalFee': 'sum',
+            'RefundFee': 'sum'
+        }).reset_index()
+        facpay_df2 = pd.merge(facpay_count_df2, facpay_amount_df2, how='left', on=['FacName', 'OnRoadFacPayment'])
+        facpay_df2.to_excel(os.path.join(dir, '厂家货款.xlsx'))
         # 总共货款
         with open(os.path.join(dir, '总货款.txt'), 'w') as f:
             f.write('总货款: {}'.format(round(facpay_df['FacPayment'].sum(), 2)))
@@ -131,7 +143,6 @@ class Summary(object):
     def calcProfit(self) -> pd.DataFrame:
         df = pd.merge(self._report_df, self._link_sku_table, how='left', on=['LinkId', 'SkuName'])
         if df['Cost'].isnull().any():
-            import pdb; pdb.set_trace()
             raise Exception('link sku not found: {}'.format(df[df['Cost'].isnull()][['LinkId', 'SkuName']].groupby(['LinkId', 'SkuName']).size().reset_index(name='Count')))
         # 计算出平台基础佣金（实际付款-结算金额）
         df['PlatformCommisionFee'] = df['SubActualTotalFee'] - df['RefundFee'] - df['TotalSettleAmount']

@@ -15,7 +15,7 @@
         "sheet": "电动车车衣-tmr-02",
         "fac_name": "车衣厂家",
         "start_row": 3,
-        "end_row": 20
+        "end_row": 21
     },
     "836896586402": {
         "sheet": "电动车坐垫-zx-01",
@@ -60,7 +60,7 @@
         "end_row": 39,
         "replace_char": {
             "❤️": "??",
-            "⭐": "??"
+            "⭐": "?"
         }
     },
     "847118432608": {
@@ -68,5 +68,84 @@
         "fac_name": "晟释厂家",
         "start_row": 3,
         "end_row": 11
+    },
+    "847696590720": {
+        "sheet": "冬季帽子-zx-01",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 10,
+        "replace_char": {
+            "⭐": "?"
+        }
+    },
+    "848057085979": {
+        "sheet": "德绒口罩-zx-01",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 12
+    },
+    "847694711579": {
+        "sheet": "童袜-zx-01",
+        "fac_name": "袜子厂家",
+        "start_row": 3,
+        "end_row": 27
+    },
+    "849478404664": {
+        "sheet": "足底按摩垫-zx-01",
+        "fac_name": "指压板厂家",
+        "start_row": 3,
+        "end_row": 9,
+        "replace_char": {
+            "❤️": "??",
+            "⭐": "?"
+        }
+    }, 
+    "848319790649": {
+        "sheet": "冬季挡风被-zx-01",
+        "fac_name": "未知厂家，参考表格数据",
+        "start_row": 3,
+        "end_row": 16,
+        "replace_char": {
+            "❗": "?"
+        }
+    },
+    "849002937763": {
+        "sheet": "童袜-zx-02",
+        "fac_name": "袜子厂家",
+        "start_row": 3,
+        "end_row": 27
+    },
+    "848849043910": {
+        "sheet": "冬季马桶垫-zx-02",
+        "fac_name": "马桶垫厂家",
+        "start_row": 3,
+        "end_row": 26
+    },
+    "848627577062": {
+        "sheet": "冬季马桶垫-zx-01",
+        "fac_name": "马桶垫厂家",
+        "start_row": 3,
+        "end_row": 15
+    },
+    "849856408120": {
+        "sheet": "冬季挡风被-zx-02",
+        "fac_name": "未知厂家，参考表格数据",
+        "start_row": 3,
+        "end_row": 10,
+        "replace_char": {
+            "❗": "?"
+        }
+    },
+    "850334460788": {
+        "sheet": "儿童帽子围巾-zx-01",
+        "fac_name": "儿童帽子厂家",
+        "start_row": 3,
+        "end_row": 6
+    },
+    "849833818050": {
+        "sheet": "护膝-zx-03",
+        "fac_name": "晟释厂家",
+        "start_row": 3,
+        "end_row": 16
     }
 }
