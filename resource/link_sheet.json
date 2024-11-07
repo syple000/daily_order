@@ -104,7 +104,7 @@
         "sheet": "冬季挡风被-zx-01",
         "fac_name": "未知厂家，参考表格数据",
         "start_row": 3,
-        "end_row": 16,
+        "end_row": 20,
         "replace_char": {
             "❗": "?"
         }
@@ -131,7 +131,7 @@
         "sheet": "冬季挡风被-zx-02",
         "fac_name": "未知厂家，参考表格数据",
         "start_row": 3,
-        "end_row": 10,
+        "end_row": 14,
         "replace_char": {
             "❗": "?"
         }
@@ -147,5 +147,11 @@
         "fac_name": "晟释厂家",
         "start_row": 3,
         "end_row": 16
+    },
+    "849083765952": {
+        "sheet": "童袜-zx-02",
+        "fac_name": "袜子厂家",
+        "start_row": 3,
+        "end_row": 27
     }
 }

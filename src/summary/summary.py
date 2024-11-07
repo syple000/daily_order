@@ -91,13 +91,30 @@ class Summary(object):
         # 总共货款
         with open(os.path.join(dir, '总货款.txt'), 'w') as f:
             f.write('总货款: {}'.format(round(facpay_df['FacPayment'].sum(), 2)))
-        # 按链接&sku计算利润
-        trade_done_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).size().reset_index(name='Count')
-        profit_df = df.groupby(['LinkId', 'SkuName', 'TradeDone']).agg({
+        # 按链接&sku计算利润/刷单比例/超半数金额退款比例
+        # 链接&sku 按是否包含刷单 0. 计数 1. 结算比例（trade done比例）2. 利润 3. 超半额退款比例
+        df['TradeDoneCnt'] = df['TradeDone'].apply(lambda x: 1 if x else 0)
+        df['HighPctRefundCnt'] = df[['SubActualTotalFee', 'RealRefundFee']].apply(lambda x: 1 if x['SubActualTotalFee'] != 0 and abs(x['RealRefundFee']/x['SubActualTotalFee']) >= 0.5 else 0, axis=1)
+        
+        df0_0 = df.groupby(['LinkId', 'SkuName']).size().reset_index(name='TotalCnt')
+        df0_1 = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName']).size().reset_index(name='RealTradeCnt')
+        df0 = pd.merge(df0_0, df0_1, on=['LinkId', 'SkuName'], how='left')
+        
+        df1_0 = df.groupby(['LinkId', 'SkuName']).agg({
+            'TradeDoneCnt': 'sum',
             'Profit': 'sum',
+            'HighPctRefundCnt': 'sum'
         }).reset_index()
-        pdf = pd.merge(trade_done_df, profit_df, how='left', on=['LinkId', 'SkuName', 'TradeDone'])
-        pdf = pdf.sort_values(['TradeDone', 'Count', 'LinkId', 'SkuName'], ascending=False)
+        df1_1 = df[df['FakeTrade'] == False].groupby(['LinkId', 'SkuName']).agg({
+            'TradeDoneCnt': 'sum',
+            'Profit': 'sum',
+            'HighPctRefundCnt': 'sum'
+        }).reset_index().rename(columns={'TradeDoneCnt': 'RealTradeDoneCnt', 'Profit': 'RealTradeProfit', 'HighPctRefundCnt': 'RealTradeHighPctRefundCnt'})
+        df1 = pd.merge(df1_0, df1_1, on=['LinkId', 'SkuName'], how='left')
+        profit_df = pd.merge(df0, df1, on=['LinkId', 'SkuName'], how='left')
+        profit_df = profit_df.fillna(0)
+        
+        pdf = profit_df.sort_values(['LinkId', 'SkuName'], ascending=False)
         pdf['Profit'] = pdf['Profit'].apply(lambda x: round(x, 2))
         pdf.to_excel(os.path.join(dir, '利润.xlsx'))
         # 总利润
@@ -129,13 +146,13 @@ class Summary(object):
         while True:
             date = start.strftime('%Y-%m-%d')
             subdf = df[df['OrderDate'] == date]
-            self.dumpArchive(subdf, os.path.join('archive', date))
+            self.dumpArchive(subdf.copy(), os.path.join('archive', date))
             l.append(subdf)
             start = start + datetime.timedelta(days=1)
             if start > end:
                 break
         df = pd.concat(l)
-        self.dumpArchive(df, os.path.join('archive', '{}To{}'.format(start_date, end_date)))
+        self.dumpArchive(df.copy(), os.path.join('archive', '{}To{}'.format(start_date, end_date)))
         with open(os.path.join('archive', '{}To{}'.format(start_date, end_date), '广告充值.txt'), 'w') as f:
             f.write('广告充值，利润计算未包含这部分支出：{}'.format(self._ad_charge))
         
@@ -161,6 +178,7 @@ class Summary(object):
         # 必须有快递才有货款。如果产生了真实发货，都算货款
         # 刷单不计算货款
         df['OnRoadFacPayment'] = df[['ExpressNo', 'OrderStatus', 'FakeTrade']].apply(lambda x: len(x['ExpressNo']) == 0 and not x['FakeTrade'] and x['OrderStatus'] != '交易关闭' and x['OrderStatus'] != '交易成功', axis=1)
+        df['RealRefundFee'] = df[['ExpressNo', 'RefundFee', 'RefundStatus', 'ShippingStatus']].apply(lambda x: x['RefundFee'] if len(x['ExpressNo']) > 0 and x['RefundStatus'] == '退款成功' and x['ShippingStatus'] != '未发货' else 0, axis=1)
         df['FacPayment'] = df[['Cost', 'Amount', 'PostFee', 'ExpressNo', 'FakeTrade', 'SubActualTotalFee', 'RefundFee', 'RefundStatus', 'ShippingStatus']].apply(lambda x: x['Cost'] * x['Amount'] + x['PostFee'] if len(x['ExpressNo']) > 0 and not x['FakeTrade'] and not (abs(x['SubActualTotalFee'] - x['RefundFee']) < 0.0001 and x['RefundStatus'] == '退款成功' and x['ShippingStatus'] == '未发货') else float(0), axis=1)
 
         # 交易生命周期是否完成
