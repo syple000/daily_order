@@ -273,6 +273,22 @@ class Reporter(object):
                     continue
                 return el[1].replace('\t', '') # 处理异常字符
             raise Exception('sku name exception: {}'.format(x))
+        def deal_sku_name_v2(x: str) -> str: # 考虑厚度等选项
+            m = {}
+            l = x.split(';')
+            for e in l:
+                el = e.split(':')
+                m[el[0]] = el[1].replace('\t', '')
+            
+            color_cat = m['颜色分类']
+            del m['颜色分类']
+            
+            r = []
+            for k in m.keys():
+                r.append(m[k])
+            r.append(color_cat)
+            return '-'.join(r)
+        df['SkuNameV2'] = df['SkuName'].apply(lambda x: deal_sku_name_v2(x))
         df['SkuName'] = df['SkuName'].apply(lambda x: deal_sku_name(x))
         df['OrderDate'] = df['OrderCreatedTime'].apply(lambda x: datetime.datetime.strptime(x.split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d'))
         df['OrderCreatedTs'] = df['OrderCreatedTime'].apply(lambda x: int(datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S').timestamp()))
@@ -309,6 +325,7 @@ class Reporter(object):
                  'OrderStatus', 
                  'Amount', 
                  'SkuName', 
+                 'SkuNameV2',
                  'LinkId',
                  'OrderCreatedTime', 'OrderCreatedTs', 'OrderDate',
                  'ExpressNo']]

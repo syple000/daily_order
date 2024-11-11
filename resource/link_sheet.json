@@ -153,5 +153,70 @@
         "fac_name": "袜子厂家",
         "start_row": 3,
         "end_row": 27
+    },
+    "850799385939": {
+        "sheet": "电脑支架-zx-01",
+        "fac_name": "电脑支架-拼多多",
+        "start_row": 3,
+        "end_row": 9
+    },
+    "848721165158": {
+        "sheet": "电脑支架-zx-02",
+        "fac_name": "电脑支架-拼多多",
+        "start_row": 3,
+        "end_row": 9
+    },
+    "850585057879": {
+        "sheet": "抹布沥水架-zx-01",
+        "fac_name": "指压板厂家",
+        "start_row": 3,
+        "end_row": 7
+    },
+    "851024062592": {
+        "sheet": "麂皮鞋刷-zx-01",
+        "fac_name": "指压板厂家",
+        "start_row": 3,
+        "end_row": 9
+    },
+    "852162949357": {
+        "sheet": "数据线热缩管-zx-01",
+        "fac_name": "数据线热缩管厂家",
+        "start_row": 3,
+        "end_row": 34
+    },
+    "852347592328": {
+        "sheet": "跳绳垫子-zx-01",
+        "fac_name": "瑜伽垫厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 43
+    },
+    "851800141551": {
+        "sheet": "跳绳垫子-zx-02",
+        "fac_name": "瑜伽垫厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 43
+    },
+    "851938555103": {
+        "sheet": "入户地垫-zx-01",
+        "fac_name": "入户地垫厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 73
+    },
+    "852085064975": {
+        "sheet": "入户地垫-zx-02",
+        "fac_name": "入户地垫厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 73
+    },
+    "852131089187": {
+        "sheet": "静电除尘掸子-zx-01",
+        "fac_name": "指压板厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 18
     }
 }

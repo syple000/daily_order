@@ -19,6 +19,15 @@ class Summary(object):
         link_sheet_filepath = 'resource/link_sheet.json'
         with open(link_sheet_filepath) as f:
             link_sheet_conf = json.load(f)
+
+        # report df的sku名称需要纠正，如果使用v2
+        def sku_name(linkid, v1, v2):
+            if linkid in link_sheet_conf and 'use_v2' in link_sheet_conf[linkid] and link_sheet_conf[linkid]['use_v2']:
+                return v2
+            else:
+                return v1
+        self._report_df['SkuName'] = self._report_df[['LinkId', 'SkuName', 'SkuNameV2']].apply(lambda x: sku_name(x['LinkId'], x['SkuName'], x['SkuNameV2']), axis=1)
+        
         dfs = []
         for link in link_sheet_conf.keys():
             start_row = link_sheet_conf[link]['start_row']
@@ -179,6 +188,16 @@ class Summary(object):
         # 刷单不计算货款
         df['OnRoadFacPayment'] = df[['ExpressNo', 'OrderStatus', 'FakeTrade']].apply(lambda x: len(x['ExpressNo']) == 0 and not x['FakeTrade'] and x['OrderStatus'] != '交易关闭' and x['OrderStatus'] != '交易成功', axis=1)
         df['RealRefundFee'] = df[['ExpressNo', 'RefundFee', 'RefundStatus', 'ShippingStatus']].apply(lambda x: x['RefundFee'] if len(x['ExpressNo']) > 0 and x['RefundStatus'] == '退款成功' and x['ShippingStatus'] != '未发货' else 0, axis=1)
+        post_ids = set(df['ExpressNo'].tolist())
+        def post_fee(id, fee, shipping_status):
+            nonlocal post_ids
+            if id in post_ids:
+                if shipping_status != '未发货':
+                    post_ids.remove(id)
+                return fee
+            else:
+                return 0
+        df['PostFee'] = df[['ExpressNo', 'PostFee', 'ShippingStatus']].apply(lambda x: post_fee(x['ExpressNo'], x['PostFee'], x['ShippingStatus']), axis=1) # 快递费对订单编号一致的不重复计算
         df['FacPayment'] = df[['Cost', 'Amount', 'PostFee', 'ExpressNo', 'FakeTrade', 'SubActualTotalFee', 'RefundFee', 'RefundStatus', 'ShippingStatus']].apply(lambda x: x['Cost'] * x['Amount'] + x['PostFee'] if len(x['ExpressNo']) > 0 and not x['FakeTrade'] and not (abs(x['SubActualTotalFee'] - x['RefundFee']) < 0.0001 and x['RefundStatus'] == '退款成功' and x['ShippingStatus'] == '未发货') else float(0), axis=1)
 
         # 交易生命周期是否完成

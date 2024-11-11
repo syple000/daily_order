@@ -9,10 +9,10 @@ if __name__ == '__main__':
     #sub.check_call('rm -rf output && mkdir -p output', shell=True)
 
     #today = datetime.datetime.today()
-    today = datetime.datetime.strptime('2024-11-05', '%Y-%m-%d')
+    today = datetime.datetime.strptime('2024-11-11', '%Y-%m-%d')
     
     #start_day = today + datetime.timedelta(days=-30) # 订单开始时间，如果需要关联发货时间，请往前多回溯几天
-    start_day = datetime.datetime.strptime('2024-10-22', '%Y-%m-%d')
+    start_day = datetime.datetime.strptime('2024-11-01', '%Y-%m-%d')
     
     end_day = today + datetime.timedelta(days=15) # 往后一个月
     today_str = today.strftime('%Y-%m-%d')
