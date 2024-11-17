@@ -170,7 +170,7 @@
         "sheet": "抹布沥水架-zx-01",
         "fac_name": "指压板厂家",
         "start_row": 3,
-        "end_row": 7
+        "end_row": 11
     },
     "851024062592": {
         "sheet": "麂皮鞋刷-zx-01",
@@ -218,5 +218,21 @@
         "start_row": 3,
         "use_v2": true,
         "end_row": 18
+    },
+    "852958857560": {
+        "sheet": "汽车腰靠-zx-01",
+        "fac_name": "汽车头枕厂家",
+        "start_row": 3,
+        "use_v2": true,
+        "end_row": 39
+    },
+    "851554434046": {
+        "sheet": "冬季挡风被-zx-03",
+        "fac_name": "未知厂家，参考表格数据",
+        "start_row": 3,
+        "end_row": 14,
+        "replace_char": {
+            "❗": "?"
+        }
     }
 }
